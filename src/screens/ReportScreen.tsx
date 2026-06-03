@@ -22,6 +22,10 @@ import { AppStackParamList } from '../navigation/AppStack';
 import { useAuth } from '../context/AuthContext';
 import { salvarChamadoOffline } from '../storage/offlineChamados';
 import { Especie, TipoChamado } from '../types';
+import {
+  notificarChamadoCriado,
+  notificarEmergencia,
+} from '../services/notifications';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Report'>;
 
@@ -119,9 +123,7 @@ export default function ReportScreen({ navigation }: Props) {
 
       const current = await Location.getCurrentPositionAsync({});
 
-      setRegion(
-        buildRegion(current.coords.latitude, current.coords.longitude)
-      );
+      setRegion(buildRegion(current.coords.latitude, current.coords.longitude));
     } catch {
       Alert.alert(
         'Localização',
@@ -158,6 +160,22 @@ export default function ReportScreen({ navigation }: Props) {
     }
   }
 
+  function atualizarMarcador(latitude: number, longitude: number) {
+    setRegion((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+    }));
+  }
+
+  async function exibirNotificacaoDoReporte() {
+    if (tipo === 'ferido') {
+      await notificarEmergencia();
+    } else {
+      await notificarChamadoCriado();
+    }
+  }
+
   async function enviar() {
     if (!user) {
       Alert.alert('Erro', 'Usuário não encontrado. Faça login novamente.');
@@ -186,6 +204,7 @@ export default function ReportScreen({ navigation }: Props) {
 
       if (netState.isConnected) {
         await salvarChamado(chamadoData);
+        await exibirNotificacaoDoReporte();
 
         Alert.alert('Sucesso', 'Reporte foi aberto.', [
           {
@@ -198,6 +217,7 @@ export default function ReportScreen({ navigation }: Props) {
       }
 
       await salvarChamadoOffline(chamadoData);
+      await exibirNotificacaoDoReporte();
 
       Alert.alert(
         'Salvo offline',
@@ -214,14 +234,6 @@ export default function ReportScreen({ navigation }: Props) {
     } finally {
       setSaving(false);
     }
-  }
-
-  function atualizarMarcador(latitude: number, longitude: number) {
-    setRegion((prev) => ({
-      ...prev,
-      latitude,
-      longitude,
-    }));
   }
 
   if (showCamera) {

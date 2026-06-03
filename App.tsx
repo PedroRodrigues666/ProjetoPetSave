@@ -14,7 +14,6 @@ function Routes() {
   useEffect(() => {
     if (!user) return;
 
-  
     sincronizarChamadosOffline();
 
     const unsubscribe = NetInfo.addEventListener((state) => {
